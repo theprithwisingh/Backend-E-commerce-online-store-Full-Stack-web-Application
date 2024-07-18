@@ -1,4 +1,5 @@
-const port  = 4000;
+const port  = 6000;
+require('dotenv').config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -6,13 +7,18 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
-const { type } = require("os");
+// const { type } = require("os");
 
 app.use(express.json());
 app.use(cors());
 
 //Database Connection With MongoDB
-mongoose.connect("mongodb+srv://prithwisingh77:Prithwi@139@cluster0.nvv9rdw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 //API Creation
 app.get("/",(req,res)=>{
@@ -39,11 +45,11 @@ app.post("/upload", upload.single('product'), (req, res) => {
 //schema for creating Products
 const Product = mongoose.model("Product",{
     id:{
-        type:number,
+        type:Number,
         required:true
     },
     name:{
-        type:string,
+        type:String,
         required:true,
     },
     image:{
@@ -73,6 +79,16 @@ const Product = mongoose.model("Product",{
 })
 
 app.post('/addproduct',async ()=>{
+        let products = await Product.find({});
+        let id;
+        if(products.length>0){
+            let last_product_array = products.slice(-1);
+            let last_product = last_product_array[0];
+            id = last_product.id+1;
+        }
+        else{
+            id:1;
+        }
         const product = new Product ({
             id:req.body.id,
             name:req.body.name,
@@ -89,6 +105,48 @@ app.post('/addproduct',async ()=>{
             name:req.body.name,
         })
 })
+
+//creating API for deleting products
+app.post('/removeproduct', async (req,res)=>{
+      await Product.findByIdAndDelete({id:req.body.id});
+      console.log("removed");
+      res.json({
+        success:true,
+        name:req.body.name
+      })
+})
+
+//Creating API for getting all products
+app.get('/allproducts',async (req,res)=>{
+    let products = await Product.find({});
+    console.log("All Products fetched");
+    res.send(products);
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 app.listen(port, (error) => {
     if (!error){
         console.log("Server Running on Port " + port);
